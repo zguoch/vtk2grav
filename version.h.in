@@ -1,0 +1,27 @@
+/**
+ * @file swEOSVersion.h.in
+ * @author Zhikui Guo (zguo@geomar.de)
+ * @brief Version config
+ * @version 0.1
+ * @date 2021-03-15
+ * 
+ * @copyright Copyright (c) 2021
+ * 
+ */
+#ifndef vtk2grav_VERSION_H
+#define vtk2grav_VERSION_H
+
+#define vtk2grav_MAJOR_VERSION ${vtk2grav_MAJOR_VERSION}
+#define vtk2grav_MINOR_VERSION ${vtk2grav_MINOR_VERSION}
+#define vtk2grav_PATCH_VERSION ${vtk2grav_PATCH_VERSION}
+#define vtk2grav_EXTRA_VERSION "${vtk2grav_EXTRA_VERSION}"
+#define vtk2grav_VERSION       "${vtk2grav_VERSION}"
+#define vtk2grav_DATE          "${vtk2grav_DATE}"
+#define vtk2grav_HOST          "${vtk2grav_HOST}"
+#define vtk2grav_PACKAGER      "${vtk2grav_PACKAGER}"
+#define vtk2grav_OS            "${vtk2grav_OS}"
+#define vtk2grav_SHORT_LICENSE "${vtk2grav_SHORT_LICENSE}"
+#define vtk2grav_QT_VERSION      "${vtk2grav_QT_VERSION}"
+#define vtk2grav_VTK_VERSION       "${vtk2grav_VTK_VERSION}"
+
+#endif
