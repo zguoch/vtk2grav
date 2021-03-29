@@ -115,6 +115,7 @@ namespace CMD
         STRUCT_ARG<double> m_refT, m_refRho,m_alpha; //reference temperature, reference density, thermal expansion. SI unit
         STRUCT_ARG<string> m_vtu_T, m_xyz_sites, m_outFile;
         vector<string> m_valueR_str;
+        STRUCT_ARG<bool> m_extractOnly; //only extract T and/or calculate rho, don't do gravity calculation. This is used to extract T and calculate gravity on server, because the ASPECT output with a lot of fields, other fields is not usefull for gravity calculation.
     public:
         cCMDarg(/* args */);
         ~cCMDarg();
@@ -184,47 +185,39 @@ namespace CMD
         string now_str=vtk2grav_DATE;
 
         //30: black  31:red  32:green  33:yellow  34:blue  35:purple  36:darkgreen
-        cout<<"========================== vtk2grav ==========================="<<std::endl;;
-        cout<<"vtk2grav, calculate gravity of 3D thermal structure."<<std::endl;;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Author "<<COLOR_GREEN<<author<<COLOR_DEFAULT<<std::endl;;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Locus "<<COLOR_GREEN<<locus<<COLOR_DEFAULT<<std::endl;;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Date "<<COLOR_GREEN<<now_str<<COLOR_DEFAULT<<std::endl;;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Version "<<COLOR_GREEN<<version<<COLOR_DEFAULT<<std::endl;;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Email "<<COLOR_GREEN<<email<<COLOR_DEFAULT<<std::endl;;
-        cout<<"============================================================"<<std::endl;;
-        cout<<COLOR_BLUE<<"Usage: vtk2grav [options]"<<COLOR_DEFAULT<<std::endl;;
-        cout<<"options:"<<std::endl;;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -h "<<COLOR_BLUE<<"List descriptions of usage and available arguments"<<COLOR_DEFAULT<<std::endl;;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -v "<<COLOR_BLUE<<"Print swEOS version number"<<COLOR_DEFAULT<<std::endl;;
-        cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -i "<<COLOR_BLUE<<"Input vtk file of temperature field."<<COLOR_DEFAULT<<std::endl;;
-        cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -p "<<COLOR_BLUE<<"Position file of calculation points (xyz)."<<COLOR_DEFAULT<<std::endl;;
-        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -T "<<COLOR_BLUE<<"Set reference temperature(deg.C), e.g. -T 1300."<<COLOR_DEFAULT<<std::endl;;
-        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -D "<<COLOR_BLUE<<"Set reference density(kg/m4), e.g. -D 3300."<<COLOR_DEFAULT<<std::endl;;
+        cout<<"========================== vtk2grav ==========================="<<std::endl;
+        cout<<"vtk2grav, calculate gravity of 3D thermal structure."<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Author "<<COLOR_GREEN<<author<<COLOR_DEFAULT<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Locus "<<COLOR_GREEN<<locus<<COLOR_DEFAULT<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Date "<<COLOR_GREEN<<now_str<<COLOR_DEFAULT<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Version "<<COLOR_GREEN<<version<<COLOR_DEFAULT<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"Email "<<COLOR_GREEN<<email<<COLOR_DEFAULT<<std::endl;
+        cout<<"============================================================"<<std::endl;
+        cout<<COLOR_BLUE<<"Usage: vtk2grav [options]"<<COLOR_DEFAULT<<std::endl;
+        cout<<"options:"<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -h "<<COLOR_BLUE<<"List descriptions of usage and available arguments"<<COLOR_DEFAULT<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -v "<<COLOR_BLUE<<"Print swEOS version number"<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -i "<<COLOR_BLUE<<"Input vtk file of temperature field."<<COLOR_DEFAULT<<std::endl;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -E "<<COLOR_BLUE<<"Only extract T and save to a new vtu file"<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -p "<<COLOR_BLUE<<"Position file of calculation points (xyz)."<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -T "<<COLOR_BLUE<<"Set reference temperature(deg.C), e.g. -T 1300."<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -D "<<COLOR_BLUE<<"Set reference density(kg/m4), e.g. -D 3300."<<COLOR_DEFAULT<<std::endl;
         cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -A "<<COLOR_BLUE<<"Set thermal expansion coeff., e.g. -A 1E5."<<COLOR_DEFAULT<<std::endl;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -o "<<COLOR_BLUE<<"Set output file, e.g. -o density.txt "<<COLOR_DEFAULT<<std::endl;;
+        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -o "<<COLOR_BLUE<<"Set output file, e.g. -o density.txt "<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -t "<<COLOR_BLUE<<"Set number of thread for parallel computing."<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -V "<<COLOR_BLUE<<"Set output information level, e.g. -V 0 means silent mode."<<COLOR_DEFAULT<<std::endl;
-        cout<<COLOR_GREEN<<"Example: "<<COLOR_BLUE<<"vtk2grav -i T_density.vtu -p sites.xyz -D 3300 -T 1300 -A 1E-5 -o grav.txt"<<COLOR_DEFAULT<<std::endl;;
+        cout<<COLOR_GREEN<<"Example: "<<COLOR_BLUE<<"vtk2grav -i T_density.vtu -p sites.xyz -D 3300 -T 1300 -A 1E-5 -o grav.txt"<<COLOR_DEFAULT<<std::endl;
     }
     static void StartText_artASCII()
     {
-        // cout<<COLOR_GREEN<<"███████╗ █████╗ ██╗  ████████╗██╗    ██╗ █████╗ ████████╗███████╗██████╗     ███████╗ ██████╗ ███████╗\n"
-        // <<"██╔════╝██╔══██╗██║  ╚══██╔══╝██║    ██║██╔══██╗╚══██╔══╝██╔════╝██╔══██╗    ██╔════╝██╔═══██╗██╔════╝\n"
-        // <<"███████╗███████║██║     ██║   ██║ █╗ ██║███████║   ██║   █████╗  ██████╔╝    █████╗  ██║   ██║███████╗\n"
-        // <<"╚════██║██╔══██║██║     ██║   ██║███╗██║██╔══██║   ██║   ██╔══╝  ██╔══██╗    ██╔══╝  ██║   ██║╚════██║\n"
-        // <<"███████║██║  ██║███████╗██║   ╚███╔███╔╝██║  ██║   ██║   ███████╗██║  ██║    ███████╗╚██████╔╝███████║\n"
-        // <<"╚══════╝╚═╝  ╚═╝╚══════╝╚═╝    ╚══╝╚══╝ ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝    ╚══════╝ ╚═════╝ ╚══════╝\n"
-        // <<COLOR_DEFAULT<<std::endl;;  
-        
-        cout<<COLOR_GREEN<<"                              $$$$$$$$\\  $$$$$$\\   $$$$$$\\  \n"
-        <<"                              $$  _____|$$  __$$\\ $$  __$$\\ \n"
-        <<" $$$$$$$\\ $$\\  $$\\  $$\\       $$ |      $$ /  $$ |$$ /  \\__|\n"
-        <<"$$  _____|$$ | $$ | $$ |      $$$$$\\    $$ |  $$ |\\$$$$$$\\  \n"
-        <<"\\$$$$$$\\  $$ | $$ | $$ |      $$  __|   $$ |  $$ | \\____$$\\ \n"
-        <<" \\____$$\\ $$ | $$ | $$ |      $$ |      $$ |  $$ |$$\\   $$ |\n"
-        <<"$$$$$$$  |\\$$$$$\\$$$$  |      $$$$$$$$\\  $$$$$$  |\\$$$$$$  |\n"
-        <<"\\_______/  \\_____\\____/       \\________| \\______/  \\______/ \n"
-        <<COLOR_DEFAULT<<std::endl;;                                                                                                          
+        // ANSI shadow
+        cout<<COLOR_GREEN<<"██╗   ██╗████████╗██╗  ██╗██████╗  ██████╗ ██████╗  █████╗ ██╗   ██╗\n"
+        <<"██║   ██║╚══██╔══╝██║ ██╔╝╚════██╗██╔════╝ ██╔══██╗██╔══██╗██║   ██║\n"
+        <<"██║   ██║   ██║   █████╔╝  █████╔╝██║  ███╗██████╔╝███████║██║   ██║\n"
+        <<"╚██╗ ██╔╝   ██║   ██╔═██╗ ██╔═══╝ ██║   ██║██╔══██╗██╔══██║╚██╗ ██╔╝\n"
+        <<" ╚████╔╝    ██║   ██║  ██╗███████╗╚██████╔╝██║  ██║██║  ██║ ╚████╔╝ \n"
+        <<"  ╚═══╝     ╚═╝   ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝  ╚═══╝  \n"
+        <<COLOR_DEFAULT<<std::endl;                                                                                                                                                                             
     }
 }
 #endif

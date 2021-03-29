@@ -11,7 +11,7 @@ namespace CMD
       m_currentConsoleAttr = csbi.wAttributes;
       int width = (int)(csbi.srWindow.Right-csbi.srWindow.Left+1);
       // int height = (int)(csbi.srWindow.Bottom-csbi.srWindow.Top+1);
-      if(width>119)
+      if(width>70)
       {
           StartText_artASCII();
       }else
@@ -21,7 +21,7 @@ namespace CMD
     #else
       struct winsize w;
       ioctl(0, TIOCGWINSZ, &w);
-      if(w.ws_col>119)
+      if(w.ws_col>70)
       {
           StartText_artASCII();
       }else
@@ -29,7 +29,7 @@ namespace CMD
           StartText();
       }
     #endif
-    
+
     // helpINFO();
     //parse arguments and check 
     cCMDarg arg;
@@ -187,7 +187,8 @@ namespace CMD
   m_refT{1300,false}, 
   m_refRho{3300,false},
   m_alpha{1E-5,false},
-  m_outFile{"density.txt",false}
+  m_outFile{"density.txt",false},
+  m_extractOnly{false, false}
   {
     
   }
@@ -226,7 +227,7 @@ namespace CMD
   {
     if(argc<2)return false; //there is no arguments
     int opt; 
-    const char *optstring = "i:o:p:T:D:A:t:V:vh"; // set argument templete
+    const char *optstring = "i:o:p:T:D:A:t:V:vhE"; // set argument templete
     int option_index = 0;
     int valid_args=0;
     STRUCT_ARG<double> doubleOptValue;
@@ -248,6 +249,10 @@ namespace CMD
       case 'v':
         cout<<"Version: "<<VERSION_MAJOR<<"."<<VERSION_MINOR<<endl;
         exit(0);
+        break;
+      case 'E':
+        m_extractOnly.value = true;
+        m_extractOnly.value = true;
         break;
       case 'i':  //input vtu file m_valueO=optarg;
         m_vtu_T.value = optarg;
@@ -320,6 +325,10 @@ namespace CMD
     modelInfo +=", Ref. T = "+to_string(m_refT.value)+" deg.C";
     modelInfo +=", Ref. rho = "+to_string(m_refRho.value)+" kg/m3";
     modelInfo +=", alpha = "+to_string(m_alpha.value);
+    if (m_extractOnly.value)
+    {
+      modelInfo="Only extract temperature field and save to a new vtu file: T_density.vtu";
+    }
     Info(modelInfo);
     // run 
     Temperature2Gravity(m_vtu_T.value, m_xyz_sites.value, m_outFile.value, m_refT.value, m_refRho.value,m_alpha.value);
@@ -339,6 +348,12 @@ namespace CMD
     Info("Reading xyz file ...");
     std::vector<FORWARD::STRUCT_SITE> sites;
     readSites_xyz(xyzFile_sites, sites);
+    if(m_extractOnly.value)
+    {
+      Info("The temperature field has been extracted and saved in T_density.vtu");
+      return 0;
+    }
+    
     // 4. calculate
     std::vector<double> grav;
     // initialize as 0
