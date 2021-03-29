@@ -53,6 +53,20 @@ namespace CMD
           fin>>site.x>>site.y>>site.z;
           sites.push_back(site);
       }
+      // check and remove repeated site in the end.
+      for (size_t i = 0; i < sites.size(); i++)
+      {
+        if(
+        (sites[sites.size()-1].x==sites[sites.size()-2].x) && 
+        (sites[sites.size()-1].y==sites[sites.size()-2].y) &&
+        (sites[sites.size()-1].z==sites[sites.size()-2].z))
+        {
+          sites.pop_back(); //remove last repeated line, this is caused by empty line in the end.
+        }else
+        {
+          break;
+        }
+      }
   }
   void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg, double refT, double refRho, double alpha)
   {
