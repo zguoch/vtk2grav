@@ -78,6 +78,12 @@ namespace CMD
 {                                                                                            
     bool bash_run(int argc, char** argv);
     void readSites_xyz(std::string fname_xyz, std::vector<FORWARD::STRUCT_SITE>& sites);
+    /**
+     * @brief Make sure cube bound as [xmin,xmax,ymin,ymax,zmin,zmax]
+     * 
+     * @param cube 
+     */
+    void makeSureCube(FORWARD::STRUCT_CUBE& cube);
     void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,double refT, double refRho, double alpha);
     void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,std::string fieldName_rho,double rho0);
     vtkSmartPointer<vtkUnstructuredGrid> ReadUnstructuredGrid(std::string const& fileName, std::vector<std::string> fieldNames);

@@ -68,6 +68,22 @@ namespace CMD
         }
       }
   }
+  void makeSureCube(FORWARD::STRUCT_CUBE& cube)
+  {
+    double x0=cube.bound[0], y0=cube.bound[2], z0=cube.bound[4];
+    if(cube.bound[1]<x0)
+    {
+      cube.bound[0]=cube.bound[1]; cube.bound[1]=x0;
+    }
+    if(cube.bound[3]<y0)
+    {
+      cube.bound[2]=cube.bound[3]; cube.bound[3]=y0;
+    }
+    if(cube.bound[5]<z0)
+    {
+      cube.bound[4]=cube.bound[5]; cube.bound[5]=z0;
+    }
+  }
   void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,std::string fieldName_rho,double rho0)
   {
       cubes.clear();
@@ -116,7 +132,6 @@ namespace CMD
               cube.bound={points->GetPoint(0)[0], points->GetPoint(7)[0],
                           points->GetPoint(0)[1], points->GetPoint(7)[1],
                           points->GetPoint(0)[2], points->GetPoint(7)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
-              cubes.push_back(cube);
           }else if(cellType==VTK_HEXAHEDRON || cellType==VTK_LAGRANGE_HEXAHEDRON) //12, 72 (minmax points are the same: 0 and 6)
           {
               cell->GetPoints();
@@ -124,11 +139,18 @@ namespace CMD
               // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
               // so only need the first point and last point 
               points = cell->GetPoints();
+              // cout<<"point num: "<<points->GetNumberOfPoints()<<endl;
+              // int j=0;
+              // {
+              //   // printf("Point(%d) = {%f, %f, %f, 1};\n",points->GetPoint(j)[0],points->GetPoint(j)[1],points->GetPoint(j)[2]);
+              //   cout<<points->GetPoint(j)[0]<<" "<<points->GetPoint(j)[1]<<" "<<points->GetPoint(j)[2]<<endl;
+              //   j=6;
+              //   cout<<points->GetPoint(j)[0]<<" "<<points->GetPoint(j)[1]<<" "<<points->GetPoint(j)[2]<<endl;
+              // }cout<<endl;
               // coordinates of the cube vertex
               cube.bound={points->GetPoint(0)[0], points->GetPoint(6)[0],
                           points->GetPoint(0)[1], points->GetPoint(6)[1],
                           points->GetPoint(0)[2], points->GetPoint(6)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
-              cubes.push_back(cube);
           }
           else
           {
@@ -141,6 +163,8 @@ namespace CMD
                 exit(0);
               }
           }
+          makeSureCube(cube);
+          cubes.push_back(cube);
       }
       writer->Write();
   }
@@ -189,7 +213,6 @@ namespace CMD
               cube.bound={points->GetPoint(0)[0], points->GetPoint(7)[0],
                           points->GetPoint(0)[1], points->GetPoint(7)[1],
                           points->GetPoint(0)[2], points->GetPoint(7)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
-              cubes.push_back(cube);
           }else if(cellType==VTK_HEXAHEDRON)
           {
               cell->GetPoints();
@@ -203,7 +226,6 @@ namespace CMD
               cube.bound={points->GetPoint(0)[0], points->GetPoint(6)[0],
                           points->GetPoint(0)[1], points->GetPoint(6)[1],
                           points->GetPoint(0)[2], points->GetPoint(6)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
-              cubes.push_back(cube);
           }else
           {
               cout<<"Unsupported cell type: "<<cellType<<endl;
@@ -215,6 +237,8 @@ namespace CMD
                 exit(0);
               }
           }
+          makeSureCube(cube);
+          cubes.push_back(cube);
           Array_density->SetValue( i, cube.density); //used to save density to a vtu file
       }
       p2c->GetOutput()->GetCellData()->AddArray(Array_density);
@@ -452,6 +476,9 @@ namespace CMD
           for (size_t i = 0; i < sites.size(); i++)
           {
               grav[i]+=cube_forward.calSinglePoint(cubes[k],sites[i]);
+              // // debug
+              // cout<<cubes[k].bound[0]<<" "<<cubes[k].bound[1]<<"; "<<cubes[k].bound[2]<<" "<<cubes[k].bound[3]<<"; "<<cubes[k].bound[4]<<" "<<cubes[k].bound[5];
+              // cout<<";;  "<<sites[i].x<<" "<<sites[i].y<<" "<<sites[i].z<<" ----- "<<cubes[k].density<<endl;
           }
           #pragma omp critical
           multibar.Update();
