@@ -79,6 +79,7 @@ namespace CMD
     bool bash_run(int argc, char** argv);
     void readSites_xyz(std::string fname_xyz, std::vector<FORWARD::STRUCT_SITE>& sites);
     void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,double refT, double refRho, double alpha);
+    void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,std::string fieldName_rho,double rho0);
     vtkSmartPointer<vtkUnstructuredGrid> ReadUnstructuredGrid(std::string const& fileName, std::vector<std::string> fieldNames);
     // calculation mode: 0d, 1d, 2d, 3d
     #define CALCULATION_MODE_SINGLEPOINT 0
@@ -112,7 +113,8 @@ namespace CMD
         // bool m_haveZ0;
         STRUCT_ARG<int> m_threadNumOMP;
         STRUCT_ARG<int> m_InfoLevel;//level of output information
-        STRUCT_ARG<double> m_refT, m_refRho,m_alpha; //reference temperature, reference density, thermal expansion. SI unit
+        STRUCT_ARG<double> m_rho0; //reference density(density - reference density = density contrast). SI unit
+        STRUCT_ARG<string> m_FieldName_Density; //field name of density in vtu file
         STRUCT_ARG<string> m_vtu_T, m_xyz_sites, m_outFile;
         vector<string> m_valueR_str;
         STRUCT_ARG<bool> m_extractOnly; //only extract T and/or calculate rho, don't do gravity calculation. This is used to extract T and calculate gravity on server, because the ASPECT output with a lot of fields, other fields is not usefull for gravity calculation.
@@ -125,8 +127,23 @@ namespace CMD
     public:
         bool Parse(int argc, char** argv); //Parse arguments
         bool Validate(); // validate arguments and print corresponding error information
+        /**
+         * @brief Calculate gravity of thermal structure. Using \f$ \rho = \rho_0[1-\alpha(T - T_0)] \f$
+         * 
+         * @param vtuFile_T VTU file containing point data field "T"
+         * @param xyzFile_sites xyz coordinate file of gravity calculation sites.
+         * @param outputFile_grav Output file of gravity (gravity in unit mGal)
+         * @param refT reference temperature (\f$ T_0 \f$, the unit is the same as "T" in vtu file)
+         * @param refRho reference density (\f$ \rho_0 \f$, in unit of \f$ kg/m^3 \f$)
+         * @param alpha thermal expansion (\f$ \alpha \f$, in unit of \f$ 1/K \f$)
+         * @return true 
+         * @return false 
+         */
         bool Temperature2Gravity(string vtuFile_T, string xyzFile_sites, string outputFile_grav, 
             double refT, double refRho, double alpha);
+        bool getCubes_VTU(string vtuFile, string fieldName_rho,std::vector<FORWARD::STRUCT_CUBE>& cubes,double rho0);
+        bool Gravity_Cubes(std::vector<FORWARD::STRUCT_CUBE> cubes,string xyzFile_sites, string outputFile_grav);
+        bool calGravity(string vtuFile, string fieldName_rho, string xyzFile_sites, string outputFile_grav, double rho0);
     private:
         bool GetOptionValue(int opt, char* optarg, STRUCT_ARG<double>& arg);
         template<typename T>
@@ -200,9 +217,9 @@ namespace CMD
         cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -i "<<COLOR_BLUE<<"Input vtk file of temperature field."<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -E "<<COLOR_BLUE<<"Only extract T and save to a new vtu file"<<COLOR_DEFAULT<<std::endl;
         cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -p "<<COLOR_BLUE<<"Position file of calculation points (xyz)."<<COLOR_DEFAULT<<std::endl;
-        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -T "<<COLOR_BLUE<<"Set reference temperature(deg.C), e.g. -T 1300."<<COLOR_DEFAULT<<std::endl;
-        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -D "<<COLOR_BLUE<<"Set reference density(kg/m4), e.g. -D 3300."<<COLOR_DEFAULT<<std::endl;
-        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -A "<<COLOR_BLUE<<"Set thermal expansion coeff., e.g. -A 1E5."<<COLOR_DEFAULT<<std::endl;
+        // cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -T "<<COLOR_BLUE<<"Set reference temperature(deg.C), e.g. -T 1300."<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -D "<<COLOR_BLUE<<"Set reference density(kg/m3), e.g. -D 3300."<<COLOR_DEFAULT<<std::endl;
+        // cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -A "<<COLOR_BLUE<<"Set thermal expansion coeff., e.g. -A 1E5."<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -o "<<COLOR_BLUE<<"Set output file, e.g. -o density.txt "<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -t "<<COLOR_BLUE<<"Set number of thread for parallel computing."<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -V "<<COLOR_BLUE<<"Set output information level, e.g. -V 0 means silent mode."<<COLOR_DEFAULT<<std::endl;

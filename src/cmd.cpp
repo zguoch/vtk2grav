@@ -68,6 +68,81 @@ namespace CMD
         }
       }
   }
+  void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,std::string fieldName_rho,double rho0)
+  {
+      cubes.clear();
+      FORWARD::STRUCT_CUBE cube;
+      // find cell data if density exist
+      vtkSmartPointer<vtkDataArray> Array_rho = usg->GetCellData()->GetArray(fieldName_rho.c_str());
+      int nCells = usg->GetNumberOfCells();
+      // Write file
+      vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
+      vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
+      writer->SetFileName("Density.vtu");
+      writer->SetInputData(usg);
+      if(!Array_rho)
+      {
+          vtkSmartPointer<vtkPointDataToCellData> p2c = vtkSmartPointer<vtkPointDataToCellData>::New();
+          p2c->SetInputData(usg);
+          p2c->PassPointDataOn();
+          p2c->Update();
+          Array_rho = p2c->GetOutput()->GetCellData()->GetArray(fieldName_rho.c_str());
+          if(!Array_rho)
+          {
+              cout<<"ERROR: T doesn't exist in the vtu file"<<endl;
+              exit(0);
+          }
+          nCells = p2c->GetOutput()->GetNumberOfCells();
+          writer->SetInputData(p2c->GetOutput());
+      }
+      
+      vtkSmartPointer<vtkCell> cell;
+      vtkSmartPointer<vtkPoints> points;
+      int cellType;
+      int numUnsupportedCell = 0;
+      for (int i = 0; i < nCells; i++)
+      {
+          cell = usg->GetCell(i);
+          cellType = cell->GetCellType();
+          cube.density = 0;
+          if(cellType==VTK_VOXEL)
+          {
+              cell->GetPoints();
+              cube.density = Array_rho->GetTuple1(i) - rho0;
+              // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
+              // so only need the first point and last point 
+              points = cell->GetPoints();
+              // coordinates of the cube vertex
+              cube.bound={points->GetPoint(0)[0], points->GetPoint(7)[0],
+                          points->GetPoint(0)[1], points->GetPoint(7)[1],
+                          points->GetPoint(0)[2], points->GetPoint(7)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
+              cubes.push_back(cube);
+          }else if(cellType==VTK_HEXAHEDRON)
+          {
+              cell->GetPoints();
+              cube.density = Array_rho->GetTuple1(i);
+              // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
+              // so only need the first point and last point 
+              points = cell->GetPoints();
+              // coordinates of the cube vertex
+              cube.bound={points->GetPoint(0)[0], points->GetPoint(6)[0],
+                          points->GetPoint(0)[1], points->GetPoint(6)[1],
+                          points->GetPoint(0)[2], points->GetPoint(6)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
+              cubes.push_back(cube);
+          }else
+          {
+              cout<<"Unsupported cell type: "<<cellType<<endl;
+              cout<<"The "<<i<<"th cell will be skipped!"<<endl;
+              numUnsupportedCell ++;
+              if(numUnsupportedCell>100)
+              {
+                std::cout<<"More than 100 unsupported cells exist. Please check the vtu file of temperature, only support VTK_VOXEL and VTK_HEXAHEDRON (ASPECT)"<<endl;
+                exit(0);
+              }
+          }
+      }
+      writer->Write();
+  }
   void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg, double refT, double refRho, double alpha)
   {
       cubes.clear();
@@ -105,7 +180,7 @@ namespace CMD
               // calculate density from T
               // cube.density = density->GetTuple1(i);
               T = Array_T->GetTuple1(i);
-              cube.density = refRho*alpha*(refT - T);
+              cube.density = refRho*(1 + alpha*(refT - T));
               // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
               // so only need the first point and last point 
               points = cell->GetPoints();
@@ -177,9 +252,9 @@ namespace CMD
       std::cout<<"The file extension is not recognized: "<<extension<<std::endl;
       }
       // remove not used field
-      int fieldNum = unstructuredGrid->GetPointData()->GetNumberOfArrays();
+      int fieldNum_pointData = unstructuredGrid->GetPointData()->GetNumberOfArrays();
       vector<string> rmFieldNames;
-      for (int i = 0; i < fieldNum; i++){
+      for (int i = 0; i < fieldNum_pointData; i++){
           bool needRemove = true;
           string arrayName(unstructuredGrid->GetPointData()->GetArrayName(i));
           for (int j = 0; j < fieldNames.size(); j++)
@@ -198,9 +273,10 @@ namespace CMD
   cCMDarg::cCMDarg(/* args */)
   :m_threadNumOMP{omp_get_max_threads(), false},
   m_InfoLevel{5, false},
-  m_refT{1300,false}, 
-  m_refRho{3300,false},
-  m_alpha{1E-5,false},
+  // m_refT{1300,false}, 
+  m_rho0{0,false},
+  m_FieldName_Density{"density",false},
+  // m_alpha{1E-5,false},
   m_outFile{"density.txt",false},
   m_extractOnly{false, false}
   {
@@ -241,7 +317,7 @@ namespace CMD
   {
     if(argc<2)return false; //there is no arguments
     int opt; 
-    const char *optstring = "i:o:p:T:D:A:t:V:vhE"; // set argument templete
+    const char *optstring = "i:o:p:D:A:t:V:vhE"; // set argument templete
     int option_index = 0;
     int valid_args=0;
     STRUCT_ARG<double> doubleOptValue;
@@ -266,7 +342,7 @@ namespace CMD
         break;
       case 'E':
         m_extractOnly.value = true;
-        m_extractOnly.value = true;
+        m_extractOnly.have = true;
         break;
       case 'i':  //input vtu file m_valueO=optarg;
         m_vtu_T.value = optarg;
@@ -280,15 +356,15 @@ namespace CMD
         m_outFile.value = optarg;
         m_outFile.have = true;
         break;
-      case 'T':  //reference temperature (deg.C)
-        if(!GetOptionValue(opt, optarg, m_refT))return false;
-        break;
+      // case 'T':  //reference temperature (deg.C)
+      //   if(!GetOptionValue(opt, optarg, m_refT))return false;
+      //   break;
       case 'D':  //reference density (kg/m3)
-        if(!GetOptionValue(opt, optarg, m_refRho))return false;
+        if(!GetOptionValue(opt, optarg, m_rho0))return false;
         break;
-      case 'A':  //Coefficient of thermal expansion, alpha
-        if(!GetOptionValue(opt, optarg, m_alpha))return false;
-        break;
+      // case 'A':  //Coefficient of thermal expansion, alpha
+      //   if(!GetOptionValue(opt, optarg, m_alpha))return false;
+      //   break;
       case 't':  //thread number
         if(!GetOptionValue(opt, optarg, doubleOptValue))return false;
         m_threadNumOMP.value = (int)(doubleOptValue.value);
@@ -315,59 +391,94 @@ namespace CMD
     {
       Error("must specify temperature vtu file by -i argument");
     }
-    if(!m_xyz_sites.have)
+    if(!m_extractOnly.have && !m_xyz_sites.have)
     {
       Error("must specify calculation points position file (xyz) by -p argument");
     }
-    // if(!m_refT.have)
-    // {
-    //   Warn("The reference temperature is not specified by -T argument, use default value: "+to_string(m_refT.value));
-    // }
-    // if(!m_refRho.have)
-    // {
-    //   Warn("The reference density is not specified by -D argument, use default value: "+to_string(m_refRho.value));
-    // }
-    // if(!m_alpha.have)
-    // {
-    //   Warn("The thermal expansion (alpha) is not specified by -A argument, use default value: "+to_string(m_alpha.value));
-    // }
-    // if(!m_outFile.have)
-    // {
-    //   Warn("The output file name is not specified by -o argument, use default filename: "+m_outFile.value);
-    // }
     string modelInfo = "Thread number: "+to_string(m_threadNumOMP.value);
-    modelInfo +=", Ref. T = "+to_string(m_refT.value)+" deg.C";
-    modelInfo +=", Ref. rho = "+to_string(m_refRho.value)+" kg/m3";
-    modelInfo +=", alpha = "+to_string(m_alpha.value);
+    // modelInfo +=", Ref. T = "+to_string(m_refT.value)+" deg.C";
+    modelInfo +=", Ref. rho = "+to_string(m_rho0.value)+" kg/m3";
+    // modelInfo +=", alpha = "+to_string(m_alpha.value);
     if (m_extractOnly.value)
     {
-      modelInfo="Only extract temperature field and save to a new vtu file: T_density.vtu";
+      modelInfo="Only extract density field and save to a new vtu file: density.vtu";
     }
     Info(modelInfo);
     // run 
-    Temperature2Gravity(m_vtu_T.value, m_xyz_sites.value, m_outFile.value, m_refT.value, m_refRho.value,m_alpha.value);
+    //Temperature2Gravity(m_vtu_T.value, m_xyz_sites.value, m_outFile.value, m_refT.value, m_rho0.value,m_alpha.value);
+    calGravity(m_vtu_T.value, m_FieldName_Density.value, m_xyz_sites.value, m_outFile.value, m_rho0.value);
     return true;
+  }
+  bool cCMDarg::calGravity(string vtuFile, string fieldName_rho, string xyzFile_sites, string outputFile_grav, double rho0)
+  {
+    std::vector<FORWARD::STRUCT_CUBE> cubes;
+    getCubes_VTU(vtuFile,"density",cubes, rho0);
+    Gravity_Cubes(cubes, xyzFile_sites,outputFile_grav);
+    return true;
+  }
+  bool cCMDarg::getCubes_VTU(string vtuFile, string fieldName_rho,std::vector<FORWARD::STRUCT_CUBE>& cubes,double rho0)
+  {
+    // 1. read vtu file
+    std::vector<string> filedNames{fieldName_rho};
+    Info("Reading vtu file ...");
+    vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid = ReadUnstructuredGrid(vtuFile, filedNames);
+    // 2. convert unstructuredGrid FORWARD::STRUCT_CUBE 
+    vtkUnstructuredGrid2Cubes(cubes,unstructuredGrid, fieldName_rho,rho0);
+    return true;
+  }
+  bool cCMDarg::Gravity_Cubes(std::vector<FORWARD::STRUCT_CUBE> cubes,string xyzFile_sites, string outputFile_grav)
+  {
+      // 1. read calculation point sites
+      Info("Reading xyz file ...");
+      std::vector<FORWARD::STRUCT_SITE> sites;
+      readSites_xyz(xyzFile_sites, sites);
+      // 4. calculate
+      std::vector<double> grav;
+      // initialize as 0
+      for (size_t i = 0; i < sites.size(); i++)grav.push_back(0);
+      FORWARD::cCube cube_forward;
+      MultiProgressBar multibar(cubes.size(),COLOR_BAR_BLUE);
+      int nThreads = omp_get_max_threads();
+      omp_set_num_threads(nThreads);
+      cout<<"Use "<<nThreads<<" threads "<<endl;
+      #pragma omp parallel for shared(sites, cubes, cube_forward, grav)
+      for (size_t k = 0; k < cubes.size(); k++)
+      {
+          for (size_t i = 0; i < sites.size(); i++)
+          {
+              grav[i]+=cube_forward.calSinglePoint(cubes[k],sites[i]);
+          }
+          #pragma omp critical
+          multibar.Update();
+      }
+      // 5. write to file
+      ofstream fout(outputFile_grav);
+      for (size_t i = 0; i < grav.size(); i++)
+      {
+          fout<<grav[i]<<endl;
+      }
+      fout.close();
+      return true;
   }
   bool cCMDarg::Temperature2Gravity(string vtuFile_T, string xyzFile_sites, string outputFile_grav, 
             double refT, double refRho, double alpha)
   {
     // 1. read vtu file
-    std::vector<string> filedNames{"T"};
+    std::vector<string> filedNames{"density"};
     Info("Reading vtu file ...");
     vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid = ReadUnstructuredGrid(vtuFile_T, filedNames);
     // 2. convert unstructuredGrid FORWARD::STRUCT_CUBE 
     std::vector<FORWARD::STRUCT_CUBE> cubes;
     vtkUnstructuredGrid2Cubes(cubes,unstructuredGrid, refT, refRho, alpha);
-    // 3. read calculation point sites
-    Info("Reading xyz file ...");
-    std::vector<FORWARD::STRUCT_SITE> sites;
-    readSites_xyz(xyzFile_sites, sites);
     if(m_extractOnly.value)
     {
       Info("The temperature field has been extracted and saved in T_density.vtu");
       return 0;
     }
-    
+    // 3. read calculation point sites
+    Info("Reading xyz file ...");
+    std::vector<FORWARD::STRUCT_SITE> sites;
+    readSites_xyz(xyzFile_sites, sites);
     // 4. calculate
     std::vector<double> grav;
     // initialize as 0
