@@ -84,7 +84,7 @@ namespace CMD
      * @param cube 
      */
     void makeSureCube(FORWARD::STRUCT_CUBE& cube);
-    void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,double refT, double refRho, double alpha);
+    // void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,double refT, double refRho, double alpha);
     void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg,std::string fieldName_rho,double rho0);
     vtkSmartPointer<vtkUnstructuredGrid> ReadUnstructuredGrid(std::string const& fileName, std::vector<std::string> fieldNames);
     // calculation mode: 0d, 1d, 2d, 3d
@@ -145,8 +145,8 @@ namespace CMD
          * @return true 
          * @return false 
          */
-        bool Temperature2Gravity(string vtuFile_T, string xyzFile_sites, string outputFile_grav, 
-            double refT, double refRho, double alpha);
+        // bool Temperature2Gravity(string vtuFile_T, string xyzFile_sites, string outputFile_grav, 
+        //     double refT, double refRho, double alpha);
         bool getCubes_VTU(string vtuFile, string fieldName_rho,std::vector<FORWARD::STRUCT_CUBE>& cubes,double rho0);
         bool Gravity_Cubes(std::vector<FORWARD::STRUCT_CUBE> cubes,string xyzFile_sites, string outputFile_grav);
         bool calGravity(string vtuFile, string fieldName_rho, string xyzFile_sites, string outputFile_grav, double rho0);

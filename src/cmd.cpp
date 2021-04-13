@@ -132,6 +132,7 @@ namespace CMD
               cube.bound={points->GetPoint(0)[0], points->GetPoint(7)[0],
                           points->GetPoint(0)[1], points->GetPoint(7)[1],
                           points->GetPoint(0)[2], points->GetPoint(7)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
+              cubes.push_back(cube);
           }else if(cellType==VTK_HEXAHEDRON || cellType==VTK_LAGRANGE_HEXAHEDRON) //12, 72 (minmax points are the same: 0 and 6)
           {
               cell->GetPoints();
@@ -139,18 +140,14 @@ namespace CMD
               // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
               // so only need the first point and last point 
               points = cell->GetPoints();
-              // cout<<"point num: "<<points->GetNumberOfPoints()<<endl;
-              // int j=0;
-              // {
-              //   // printf("Point(%d) = {%f, %f, %f, 1};\n",points->GetPoint(j)[0],points->GetPoint(j)[1],points->GetPoint(j)[2]);
-              //   cout<<points->GetPoint(j)[0]<<" "<<points->GetPoint(j)[1]<<" "<<points->GetPoint(j)[2]<<endl;
-              //   j=6;
-              //   cout<<points->GetPoint(j)[0]<<" "<<points->GetPoint(j)[1]<<" "<<points->GetPoint(j)[2]<<endl;
-              // }cout<<endl;
               // coordinates of the cube vertex
-              cube.bound={points->GetPoint(0)[0], points->GetPoint(6)[0],
-                          points->GetPoint(0)[1], points->GetPoint(6)[1],
-                          points->GetPoint(0)[2], points->GetPoint(6)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
+              double bounds[6];
+              cell->GetBounds(bounds);
+              cube.bound={bounds[0],bounds[1],bounds[2],bounds[3],bounds[4],bounds[5]};
+              cubes.push_back(cube);
+              // cube.bound={points->GetPoint(0)[0], points->GetPoint(6)[0],
+              //             points->GetPoint(0)[1], points->GetPoint(6)[1],
+              //             points->GetPoint(0)[2], points->GetPoint(6)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
           }
           else
           {
@@ -163,91 +160,7 @@ namespace CMD
                 exit(0);
               }
           }
-          makeSureCube(cube);
-          cubes.push_back(cube);
       }
-      writer->Write();
-  }
-  void vtkUnstructuredGrid2Cubes(std::vector<FORWARD::STRUCT_CUBE>& cubes, vtkUnstructuredGrid* usg, double refT, double refRho, double alpha)
-  {
-      cubes.clear();
-      FORWARD::STRUCT_CUBE cube;
-      vtkSmartPointer<vtkPointDataToCellData> p2c = vtkSmartPointer<vtkPointDataToCellData>::New();
-      p2c->SetInputData(usg);
-      p2c->PassPointDataOn();
-      p2c->Update();
-      
-
-      vtkSmartPointer<vtkDataArray> Array_T = p2c->GetOutput()->GetCellData()->GetArray("T");
-      if(!Array_T)
-      {
-          cout<<"ERROR: T doesn't exist in the vtu file"<<endl;
-          exit(0);
-      }
-      int nCells = p2c->GetOutput()->GetNumberOfCells();
-      vtkSmartPointer<vtkCell> cell;
-      vtkSmartPointer<vtkPoints> points;
-      int cellType;
-      int numUnsupportedCell = 0;
-      double T;
-      
-      vtkSmartPointer<vtkDoubleArray> Array_density = vtkSmartPointer<vtkDoubleArray>::New();
-      Array_density->SetNumberOfValues(nCells);
-      Array_density->SetName("density");
-      for (int i = 0; i < nCells; i++)
-      {
-          cell = usg->GetCell(i);
-          cellType = cell->GetCellType();
-          cube.density = 0;
-          if(cellType==VTK_VOXEL)
-          {
-              cell->GetPoints();
-              // calculate density from T
-              // cube.density = density->GetTuple1(i);
-              T = Array_T->GetTuple1(i);
-              cube.density = refRho*(1 + alpha*(refT - T));
-              // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
-              // so only need the first point and last point 
-              points = cell->GetPoints();
-              // coordinates of the cube vertex
-              cube.bound={points->GetPoint(0)[0], points->GetPoint(7)[0],
-                          points->GetPoint(0)[1], points->GetPoint(7)[1],
-                          points->GetPoint(0)[2], points->GetPoint(7)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
-          }else if(cellType==VTK_HEXAHEDRON)
-          {
-              cell->GetPoints();
-              // cube.density = density->GetTuple1(i);
-              T = Array_T->GetTuple1(i);
-              cube.density = refRho*alpha*(T - refT);
-              // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
-              // so only need the first point and last point 
-              points = cell->GetPoints();
-              // coordinates of the cube vertex
-              cube.bound={points->GetPoint(0)[0], points->GetPoint(6)[0],
-                          points->GetPoint(0)[1], points->GetPoint(6)[1],
-                          points->GetPoint(0)[2], points->GetPoint(6)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
-          }else
-          {
-              cout<<"Unsupported cell type: "<<cellType<<endl;
-              cout<<"The "<<i<<"th cell will be skipped!"<<endl;
-              numUnsupportedCell ++;
-              if(numUnsupportedCell>100)
-              {
-                std::cout<<"More than 100 unsupported cells exist. Please check the vtu file of temperature, only support VTK_VOXEL and VTK_HEXAHEDRON (ASPECT)"<<endl;
-                exit(0);
-              }
-          }
-          makeSureCube(cube);
-          cubes.push_back(cube);
-          Array_density->SetValue( i, cube.density); //used to save density to a vtu file
-      }
-      p2c->GetOutput()->GetCellData()->AddArray(Array_density);
-      // write to file 
-      // Write file
-      vtkSmartPointer<vtkXMLUnstructuredGridWriter> writer =
-      vtkSmartPointer<vtkXMLUnstructuredGridWriter>::New();
-      writer->SetFileName("T_density.vtu");
-      writer->SetInputData(p2c->GetOutput());
       writer->Write();
   }
   vtkSmartPointer<vtkUnstructuredGrid> ReadUnstructuredGrid(std::string const& fileName, std::vector<std::string> fieldNames)
@@ -492,54 +405,7 @@ namespace CMD
       fout.close();
       return true;
   }
-  bool cCMDarg::Temperature2Gravity(string vtuFile_T, string xyzFile_sites, string outputFile_grav, 
-            double refT, double refRho, double alpha)
-  {
-    // 1. read vtu file
-    std::vector<string> filedNames{"density"};
-    Info("Reading vtu file ...");
-    vtkSmartPointer<vtkUnstructuredGrid> unstructuredGrid = ReadUnstructuredGrid(vtuFile_T, filedNames);
-    // 2. convert unstructuredGrid FORWARD::STRUCT_CUBE 
-    std::vector<FORWARD::STRUCT_CUBE> cubes;
-    vtkUnstructuredGrid2Cubes(cubes,unstructuredGrid, refT, refRho, alpha);
-    if(m_extractOnly.value)
-    {
-      Info("The temperature field has been extracted and saved in T_density.vtu");
-      return 0;
-    }
-    // 3. read calculation point sites
-    Info("Reading xyz file ...");
-    std::vector<FORWARD::STRUCT_SITE> sites;
-    readSites_xyz(xyzFile_sites, sites);
-    // 4. calculate
-    std::vector<double> grav;
-    // initialize as 0
-    for (size_t i = 0; i < sites.size(); i++)grav.push_back(0);
-    FORWARD::cCube cube_forward;
-    MultiProgressBar multibar(cubes.size(),COLOR_BAR_BLUE);
-    int nThreads = omp_get_max_threads();
-    omp_set_num_threads(nThreads);
-    cout<<"Use "<<nThreads<<" threads "<<endl;
-    #pragma omp parallel for shared(sites, cubes, cube_forward, grav)
-    for (size_t k = 0; k < cubes.size(); k++)
-    {
-        for (size_t i = 0; i < sites.size(); i++)
-        {
-            grav[i]+=cube_forward.calSinglePoint(cubes[k],sites[i]);
-        }
-        #pragma omp critical
-        multibar.Update();
-    }
-    
-    // 5. write to file
-    ofstream fout(outputFile_grav);
-    for (size_t i = 0; i < grav.size(); i++)
-    {
-        fout<<grav[i]<<endl;
-    }
-    fout.close();
-    return true;
-  }
+  
   template<typename T>
   vector<T> cCMDarg::linspace(T xmin, T xmax, T dx)
   {
