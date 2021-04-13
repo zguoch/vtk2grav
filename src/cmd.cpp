@@ -105,7 +105,7 @@ namespace CMD
               // calculate density from T
               // cube.density = density->GetTuple1(i);
               T = Array_T->GetTuple1(i);
-              cube.density = refRho*alpha*(T - refT);
+              cube.density = refRho*alpha*(refT - T);
               // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
               // so only need the first point and last point 
               points = cell->GetPoints();
