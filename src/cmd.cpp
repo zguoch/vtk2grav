@@ -89,7 +89,7 @@ namespace CMD
           Array_rho = p2c->GetOutput()->GetCellData()->GetArray(fieldName_rho.c_str());
           if(!Array_rho)
           {
-              cout<<"ERROR: T doesn't exist in the vtu file"<<endl;
+              cout<<"ERROR: "<<fieldName_rho<<" doesn't exist in the vtu file"<<endl;
               exit(0);
           }
           nCells = p2c->GetOutput()->GetNumberOfCells();
@@ -105,7 +105,7 @@ namespace CMD
           cell = usg->GetCell(i);
           cellType = cell->GetCellType();
           cube.density = 0;
-          if(cellType==VTK_VOXEL)
+          if(cellType==VTK_VOXEL) //11
           {
               cell->GetPoints();
               cube.density = Array_rho->GetTuple1(i) - rho0;
@@ -117,10 +117,10 @@ namespace CMD
                           points->GetPoint(0)[1], points->GetPoint(7)[1],
                           points->GetPoint(0)[2], points->GetPoint(7)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
               cubes.push_back(cube);
-          }else if(cellType==VTK_HEXAHEDRON)
+          }else if(cellType==VTK_HEXAHEDRON || cellType==VTK_LAGRANGE_HEXAHEDRON) //12, 72 (minmax points are the same: 0 and 6)
           {
               cell->GetPoints();
-              cube.density = Array_rho->GetTuple1(i);
+              cube.density = Array_rho->GetTuple1(i) - rho0;
               // for VTK_VOXEL(11) and VTK_HEXAHEDRON(12), regard cell as cube even though VTK_HEXAHEDRON is not a cube, but actually in ASPECT modeling results, VTK_HEXAHEDRON is cube
               // so only need the first point and last point 
               points = cell->GetPoints();
@@ -129,7 +129,8 @@ namespace CMD
                           points->GetPoint(0)[1], points->GetPoint(6)[1],
                           points->GetPoint(0)[2], points->GetPoint(6)[2]}; //[xmin,xmax,ymin,ymax,zmin,zmax]
               cubes.push_back(cube);
-          }else
+          }
+          else
           {
               cout<<"Unsupported cell type: "<<cellType<<endl;
               cout<<"The "<<i<<"th cell will be skipped!"<<endl;
@@ -317,7 +318,7 @@ namespace CMD
   {
     if(argc<2)return false; //there is no arguments
     int opt; 
-    const char *optstring = "i:o:p:D:A:t:V:vhE"; // set argument templete
+    const char *optstring = "i:o:p:D:A:F:t:V:vhE"; // set argument templete
     int option_index = 0;
     int valid_args=0;
     STRUCT_ARG<double> doubleOptValue;
@@ -362,6 +363,10 @@ namespace CMD
       case 'D':  //reference density (kg/m3)
         if(!GetOptionValue(opt, optarg, m_rho0))return false;
         break;
+      case 'F':  //reference density (kg/m3)
+        m_FieldName_Density.value = optarg;
+        m_FieldName_Density.have = true;
+        break;
       // case 'A':  //Coefficient of thermal expansion, alpha
       //   if(!GetOptionValue(opt, optarg, m_alpha))return false;
       //   break;
@@ -397,8 +402,8 @@ namespace CMD
     }
     string modelInfo = "Thread number: "+to_string(m_threadNumOMP.value);
     // modelInfo +=", Ref. T = "+to_string(m_refT.value)+" deg.C";
-    modelInfo +=", Ref. rho = "+to_string(m_rho0.value)+" kg/m3";
-    // modelInfo +=", alpha = "+to_string(m_alpha.value);
+    modelInfo +=", Rho0 = "+to_string(m_rho0.value)+" kg/m3";
+    modelInfo +=", Density field name = "+m_FieldName_Density.value;
     if (m_extractOnly.value)
     {
       modelInfo="Only extract density field and save to a new vtu file: density.vtu";
@@ -412,7 +417,7 @@ namespace CMD
   bool cCMDarg::calGravity(string vtuFile, string fieldName_rho, string xyzFile_sites, string outputFile_grav, double rho0)
   {
     std::vector<FORWARD::STRUCT_CUBE> cubes;
-    getCubes_VTU(vtuFile,"density",cubes, rho0);
+    getCubes_VTU(vtuFile,fieldName_rho,cubes, rho0);
     Gravity_Cubes(cubes, xyzFile_sites,outputFile_grav);
     return true;
   }

@@ -218,7 +218,8 @@ namespace CMD
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -E "<<COLOR_BLUE<<"Only extract T and save to a new vtu file"<<COLOR_DEFAULT<<std::endl;
         cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -p "<<COLOR_BLUE<<"Position file of calculation points (xyz)."<<COLOR_DEFAULT<<std::endl;
         // cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -T "<<COLOR_BLUE<<"Set reference temperature(deg.C), e.g. -T 1300."<<COLOR_DEFAULT<<std::endl;
-        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -D "<<COLOR_BLUE<<"Set reference density(kg/m3), e.g. -D 3300."<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -D "<<COLOR_BLUE<<"Set reference density(kg/m3) which will be subtracted from the input density field, e.g. -D 3300. Default is 0"<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -F "<<COLOR_BLUE<<"Specify field name of density in the vtu file, default is density."<<COLOR_DEFAULT<<std::endl;
         // cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -A "<<COLOR_BLUE<<"Set thermal expansion coeff., e.g. -A 1E5."<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -o "<<COLOR_BLUE<<"Set output file, e.g. -o density.txt "<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -t "<<COLOR_BLUE<<"Set number of thread for parallel computing."<<COLOR_DEFAULT<<std::endl;
