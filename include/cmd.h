@@ -221,7 +221,7 @@ namespace CMD
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -h "<<COLOR_BLUE<<"List descriptions of usage and available arguments"<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -v "<<COLOR_BLUE<<"Print swEOS version number"<<COLOR_DEFAULT<<std::endl;
         cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -i "<<COLOR_BLUE<<"Input vtk file of temperature field."<<COLOR_DEFAULT<<std::endl;
-        cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -E "<<COLOR_BLUE<<"Only extract T and save to a new vtu file"<<COLOR_DEFAULT<<std::endl;
+        // cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -E "<<COLOR_BLUE<<"Only extract T and save to a new vtu file"<<COLOR_DEFAULT<<std::endl;
         cout<<COLOR_RED<<setw(wordWidth)<<setiosflags(ios::left)<<"  -p "<<COLOR_BLUE<<"Position file of calculation points (xyz)."<<COLOR_DEFAULT<<std::endl;
         // cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -T "<<COLOR_BLUE<<"Set reference temperature(deg.C), e.g. -T 1300."<<COLOR_DEFAULT<<std::endl;
         cout<<COLOR_GREEN<<setw(wordWidth)<<setiosflags(ios::left)<<"  -D "<<COLOR_BLUE<<"Set reference density(kg/m3) which will be subtracted from the input density field, e.g. -D 3300. Default is 0"<<COLOR_DEFAULT<<std::endl;
@@ -230,7 +230,7 @@ namespace CMD
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -o "<<COLOR_BLUE<<"Set output file, e.g. -o density.txt "<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -t "<<COLOR_BLUE<<"Set number of thread for parallel computing."<<COLOR_DEFAULT<<std::endl;
         cout<<setw(wordWidth)<<setiosflags(ios::left)<<"  -V "<<COLOR_BLUE<<"Set output information level, e.g. -V 0 means silent mode."<<COLOR_DEFAULT<<std::endl;
-        cout<<COLOR_GREEN<<"Example: "<<COLOR_BLUE<<"vtk2grav -i T_density.vtu -p sites.xyz -D 3300 -T 1300 -A 1E-5 -o grav.txt"<<COLOR_DEFAULT<<std::endl;
+        cout<<COLOR_GREEN<<"Example: "<<COLOR_BLUE<<"vtk2grav -i T_density.vtu -F density -D 3300  -p sites.xyz -o grav.txt"<<COLOR_DEFAULT<<std::endl;
     }
     static void StartText_artASCII()
     {

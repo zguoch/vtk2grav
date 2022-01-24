@@ -23,10 +23,11 @@ namespace CMD
       ioctl(0, TIOCGWINSZ, &w);
       if(w.ws_col>70)
       {
-          StartText_artASCII();
+          // StartText_artASCII();
+          // StartText();
       }else
       {
-          StartText();
+          // StartText();
       }
     #endif
 
