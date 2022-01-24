@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(vtk2grav_MAJOR_VERSION 1)
 set(vtk2grav_MINOR_VERSION 0)
-set(vtk2grav_PATCH_VERSION 0)
+set(vtk2grav_PATCH_VERSION 4)
 set(vtk2grav_EXTRA_VERSION "")
 set(vtk2grav_EXTRA_VERSION_TEXI "${vtk2grav_EXTRA_VERSION}")
 if(NOT vtk2grav_RELEASE)
