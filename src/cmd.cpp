@@ -380,9 +380,9 @@ namespace CMD
       for (size_t i = 0; i < sites.size(); i++)grav.push_back(0);
       FORWARD::cCube cube_forward;
       MultiProgressBar multibar(cubes.size(),COLOR_BAR_BLUE);
-      int nThreads = omp_get_max_threads();
-      omp_set_num_threads(nThreads);
-      cout<<"Use "<<nThreads<<" threads "<<endl;
+      // int nThreads = omp_get_max_threads();
+      omp_set_num_threads(m_threadNumOMP.value);
+      cout<<"Use "<<m_threadNumOMP.value<<" threads "<<endl;
       #pragma omp parallel for shared(sites, cubes, cube_forward, grav)
       for (size_t k = 0; k < cubes.size(); k++)
       {
