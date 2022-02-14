@@ -379,24 +379,29 @@ namespace CMD
       std::vector<double> grav;
       // initialize as 0
       for (size_t i = 0; i < sites.size(); i++)grav.push_back(0);
+      size_t num_cubes = cubes.size();
+      size_t num_sites = sites.size();
+      double* tmp_grav_cubes = new double[num_cubes];
       FORWARD::cCube cube_forward;
       // int nThreads = omp_get_max_threads();
       omp_set_num_threads(m_threadNumOMP.value);
       cout<<"Use "<<m_threadNumOMP.value<<" threads "<<endl;
-      MultiProgressBar multibar(cubes.size(),COLOR_BAR_BLUE);
-      #pragma omp parallel for shared(sites, cubes, cube_forward, grav)
-      for (size_t k = 0; k < cubes.size(); k++)
+      MultiProgressBar multibar(num_sites,COLOR_BAR_BLUE);
+      for (size_t i = 0; i < num_sites; i++)
       {
-          for (size_t i = 0; i < sites.size(); i++)
+          #pragma omp parallel for shared(sites, cubes, cube_forward, grav)
+          for (size_t k = 0; k < num_cubes; k++)
           {
-              grav[i]+=cube_forward.calSinglePoint(cubes[k],sites[i]);
-              // // debug
-              // cout<<cubes[k].bound[0]<<" "<<cubes[k].bound[1]<<"; "<<cubes[k].bound[2]<<" "<<cubes[k].bound[3]<<"; "<<cubes[k].bound[4]<<" "<<cubes[k].bound[5];
-              // cout<<";;  "<<sites[i].x<<" "<<sites[i].y<<" "<<sites[i].z<<" ----- "<<cubes[k].density<<endl;
+              tmp_grav_cubes[k] = cube_forward.calSinglePoint(cubes[k],sites[i]);
           }
-          #pragma omp critical
+          // #pragma omp critical
+          for (size_t k = 0; k < num_cubes; k++)
+          {
+              grav[i] += tmp_grav_cubes[k];
+          }
           multibar.Update();
       }
+      delete[] tmp_grav_cubes;
       // 5. write to file
       ofstream fout(outputFile_grav);
       for (size_t i = 0; i < grav.size(); i++)
